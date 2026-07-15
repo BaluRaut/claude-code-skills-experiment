@@ -1,167 +1,117 @@
-# Do Claude Code "skills" actually improve AI-generated code?
+# Do Claude Code "skills" make AI write better code? (Mostly: no. But that's not the point.)
 
-**An honest A/B/C experiment — and a result that surprised me.**
+**An honest experiment — the same feature backlog built four ways, including
+two independent "cold" baselines with no skills at all.**
 
-I've been building a large library of [Claude Code skills](https://github.com/BaluRaut/claude-code-skills)
-(reusable playbooks that tell an AI coding agent *how my team writes code*:
-validation with zod, testing conventions, folder structure, error handling,
-etc.). Before rolling them out to a 12-developer team, I wanted evidence: **do
-the skills actually make the output better, or do they just feel productive?**
+> **TL;DR.** On a single well-specified feature, skills did **not** improve
+> correctness or test coverage — two separate no-skills runs both *beat* the
+> with-skills run. What skills reliably do is make output **uniform** (same
+> validation, structure, conventions) across many builders. The value is
+> **consistency and policy enforcement at scale, not a quality boost on one
+> feature.** Ticket quality mattered more than skills in every arm.
 
-So I ran the same feature backlog three ways and measured it. This repo is the
-full, reproducible result. **I'd genuinely like the community to poke holes in
-it.**
+I'm building a [library of Claude Code skills](https://github.com/BaluRaut/claude-code-skills)
+(playbooks that tell an AI agent *how my team writes code*) for a 12-dev team.
+Before rolling it out I wanted evidence, not vibes. So I measured.
 
-> The analysis below was written by the AI (Claude) that ran the experiment,
-> reported honestly — including the part that undercuts the tool it was
-> promoting. Scrutinize accordingly.
+> The analysis was written by the AI (Claude) that ran the experiment, reported
+> honestly — including the parts that undercut the tool it was promoting. It ran
+> two cold baselines specifically to try to *disprove* the skills' value.
+> Scrutinize accordingly, and [open an issue](../../issues) if you read it
+> differently.
 
 ---
 
 ## The setup
 
-A small **doctor-appointment app** — Vite + React 19 + antd 6 + TypeScript,
-with `localStorage` as the database (no backend). A 9-ticket backlog
-(`jira/DOC-1..9.md`) with real Given/When/Then acceptance criteria: models +
-persistence, seed doctors, a booking form with validation, a no-double-booking
-rule, a list with cancel, empty/error states, filters, and a test suite.
+A **doctor-appointment app** — Vite + React 19 + antd 6 + TypeScript,
+`localStorage` as the database (no backend). A 9-ticket backlog
+([`jira/`](jira/)) with real Given/When/Then acceptance criteria. Built four
+ways:
 
-Built three ways, one branch each:
+| Arm | Where | Builder | Skills? |
+|-----|-------|---------|---------|
+| Contaminated baseline | `without-skills` | session that authored the skills | knew them |
+| Cold baseline #1 | `without-skills-cold` | fresh subagent, my prompt | no |
+| **Cold baseline #2** ⭐ | [separate repo](https://github.com/BaluRaut/claude-skills-cold-baseline) | fresh session, separate folder, not my prompt | no |
+| With skills | `with-skills` | authoring session, 13 skills | yes |
 
-| Arm | Branch | Builder | Had the skills? |
-|-----|--------|---------|-----------------|
-| Contaminated baseline | `without-skills` | The session that *authored* the skills | No files, but knew them by heart |
-| **Cold baseline** ⭐ | `without-skills-cold` | A **fresh AI agent**, zero prior context | No — tickets only |
-| With skills | `with-skills` | Same authoring session | Yes — 13 skills + conventions |
+Why two cold baselines? The first "baseline" was built by the same session that
+wrote the skills — contaminated. So I ran a fresh **subagent**, then (to kill
+even the "your prompt leaked" objection) a fully **separate folder + session**.
+Those two are the honest comparison.
 
-**Why the "cold baseline" is the one that matters:** the first baseline was
-built by the same AI session that wrote all the skills — so it "knew" every
-convention even with the skill files deleted. That's contaminated. To get an
-honest baseline I spawned a **fresh agent with no conversation history** on a
-branch with no skills and no `CLAUDE.md`, and prompted it *only* from the
-tickets. It had no idea skills existed.
+## Results (every arm: typecheck ✅, build ✅)
 
----
+| Metric | contaminated | cold #1 | **cold #2** | with-skills |
+|--------|:---:|:---:|:---:|:---:|
+| **Tests passing** | 7 | 15 | **15** | 10 |
+| **Tickets fully met** | 6/9 | 9/9 | **9/9** | ~8/9 |
+| Through-the-form conflict + persist tests | ✗ | ✓ | **✓** | ✗ |
+| Validation | plain TS | hand-rolled | **zod (unprompted)** | zod |
+| Structure | flat | layered | layered | feature folders |
 
-## The results (all three: typecheck ✅, build ✅)
+**Both cold, no-skills arms matched or beat the with-skills arm** — more tests,
+more tickets, and they even wrote through-the-form tests the skills arm skipped.
 
-| Metric | Contaminated baseline | **Cold baseline (no skills)** | With skills |
-|--------|:---------------------:|:-----------------------------:|:-----------:|
-| **Tests passing** | 7 | **15** | 10 |
-| **Tickets fully met** | 6 / 9 | **9 / 9** | ~8 / 9 |
-| Through-the-form conflict test | ✗ | **✓** | ✗ |
-| Valid-booking-persists UI test | ✗ | **✓** | ✗ |
-| Corrupt-data resilience tested | ✗ | ✓ | ✓ |
-| `useSyncExternalStore` bug avoided | ✓ (knew it) | **✓ (figured it out)** | ✓ (skill warns) |
-| jsdom polyfills added | matchMedia | **matchMedia + ResizeObserver** | matchMedia |
-| Form busy state | ✗ | ✓ | ✓ |
-| Persistence isolated from UI | ✓ | ✓ | ✓ |
-| Pure, testable conflict rule | ✓ | ✓ | ✓ |
-| Validation approach | plain TS (zod unused) | **hand-rolled, resilient** | **zod as source of truth** |
-| Folder structure | flat | layered (`domain/ data/`) | feature folders |
+## The finding
 
-**The cold, no-skills arm was the most complete and best-tested of the three.**
-It wrote 15 passing tests and hit 9/9 tickets — including two through-the-form
-tests that *both* skill-aware arms skipped, plus a `ResizeObserver` polyfill
-neither of mine bothered with. It even dodged a `useSyncExternalStore` caching
-bug on its own.
+The two cold runs were **both excellent and different from each other** — one
+used zod, one hand-rolled validation; different layouts, different test
+structures. That's the crux:
 
-(And the "contaminated baseline" was the *worst* arm — proof that a human/AI
-role-playing a baseline is unreliable in both directions. Ignore it; the cold
-agent is the honest one.)
+> **Skills don't make the code better. They make it uniform.** Two capable cold
+> runs were both great and both *different*; skills would have made them the
+> same. Across 12 developers, that predictability — not quality — is the value.
 
----
+Notably, "zod as the source of truth" — which I'd assumed was the skills'
+signature contribution — showed up **unprompted** in cold baseline #2. A capable
+model reaches for it on its own.
 
-## What the skills actually added
+## Takeaways
 
-Stripped of bias, the **only** things the with-skills arm did that the cold
-baseline didn't:
-
-1. **zod as the single source of truth** for types + validation. The cold model
-   hand-rolled its own resilient parsing, which worked fine. zod-everywhere is
-   a *house convention*, not a correctness win.
-2. **Feature-folder structure** vs the cold model's layer folders. Also a
-   convention, not "better."
-
-On **correctness, completeness, and test coverage, the skills did not beat a
-capable model working from good tickets** — they arguably trailed it.
-
----
-
-## The gyan (honest takeaways)
-
-1. **Skills are not a quality multiplier on a single feature.** A capable model
-   + well-written tickets already produces excellent, tested, structured code.
-   This experiment shows it plainly.
-2. **Skills are a _consistency & governance_ mechanism.** Their real value is
-   making N developers and every AI run produce code in *your* house style —
-   same validation, structure, error shapes, testids — *without re-deciding
-   each time*. That uniformity pays off across many repos and hundreds of PRs
-   (fewer review nits, faster onboarding, safer refactors). It does **not**
-   show up in one 9-ticket app.
-3. **Ticket quality was the biggest lever.** The well-specified acceptance
-   criteria carried every arm. Investing in good tickets may beat investing in
-   code-gen skills. (The most valuable "skill" might be the one that forces
-   good Given/When/Then ACs.)
-4. **Encode the non-obvious, not the default.** Skills earn their keep where the
-   right choice *isn't* what a model does by default — your specific error
-   envelope, least-privilege IAM, "don't retry at two layers," tenant
-   isolation. For things a good model already nails, a skill mostly adds
-   ceremony (and burns context budget).
-5. **Don't oversell it.** If you pitch skills as "the AI writes better code,"
-   the first person who runs a cold baseline disproves it. Pitch what's true:
-   **consistent, house-conformant output at scale, and a home for decisions
-   that aren't the model's default.**
-
----
+1. **Not a quality multiplier on one feature.** Disproven twice, head-to-head.
+2. **A consistency / governance mechanism.** Value = every dev and every AI run
+   converging on *your* house style, across many repos and PRs. Invisible in one
+   app; compounding at team scale.
+3. **Ticket quality was the dominant lever.** Good acceptance criteria carried
+   every arm. The highest-ROI "skill" may be the one that forces good tickets.
+4. **Encode the non-obvious, not the default** — your error envelope,
+   least-privilege IAM, "don't retry at two layers," tenant isolation. For what
+   a good model already nails, a skill mostly adds ceremony.
 
 ## Limitations (please attack these)
 
-- **n = 1 app**, small, single stack (React/antd/localStorage). A backend
-  service, a legacy codebase, or a fuzzier spec might swing it the other way —
-  skills may matter *more* where defaults are wrong or the domain is unusual.
-- **Same model family** built all arms; a weaker model might benefit more from
-  skills.
-- **"Completeness/tests" ≠ "maintainability."** The skills' consistency payoff
-  is explicitly a multi-PR, multi-dev effect this single-app test can't measure.
-- **The cold agent's prompt** (`the neutral prompt is in the git history`) still
-  came from me; wording effects are possible.
-- My conclusions are *one interpretation.* If you read the diffs differently, I
-  want to hear it.
+- **n = 1 app**, small, single stack. A backend service, a legacy codebase, or a
+  fuzzy spec might favor skills *more* — where the model's defaults are wrong.
+- **Same model family** built every arm; a weaker model might benefit more.
+- **"Tests/completeness" ≠ "maintainability."** The consistency payoff is a
+  multi-PR, multi-dev effect this single app can't measure.
+- Conclusions are one interpretation. Read the diffs; tell me if you disagree.
 
----
-
-## Reproduce / inspect
+## Reproduce
 
 ```bash
-git clone <this repo>
-cd react-app-skills && npm install
-
-# each arm builds + tests independently:
-git checkout without-skills-cold && npm run typecheck && npm test   # 15 tests, 9/9
-git checkout with-skills          && npm run typecheck && npm test   # 10 tests
-git checkout without-skills        && npm run typecheck && npm test   # 7 tests (biased)
-
-# see cold-baseline vs skills side by side:
-git diff without-skills-cold with-skills -- src
+git checkout without-skills-cold && npm i && npm test   # cold #1: 15 tests, 9/9
+git checkout with-skills          && npm i && npm test   # skills:  10 tests
+git diff without-skills-cold with-skills -- src          # cold vs skills
 ```
 
 - Full write-up: [`COMPARISON.md`](COMPARISON.md)
-- The tickets: [`jira/`](jira/)
-- The skills under test: [`.claude/skills/`](.claude/skills/) (present on `main`/`with-skills`)
-- The broader skills catalog: https://github.com/BaluRaut/claude-code-skills
+- Cold baseline #2 (cleanest run, separate repo): https://github.com/BaluRaut/claude-skills-cold-baseline
+- The skills catalog under test: https://github.com/BaluRaut/claude-code-skills
 
 ## Branch map
 
 ```
-main                 docs + skills library + jira backlog (this README, COMPARISON.md)
-without-skills-cold  ⭐ honest baseline — fresh agent, no skills   (15 tests, 9/9)
-with-skills          skills arm — zod, feature folders            (10 tests, ~8/9)
-without-skills       contaminated baseline — ignore               (7 tests, 6/9)
+main                 docs + skills + jira backlog
+without-skills-cold  ⭐ honest baseline — fresh subagent    (15 tests, 9/9)
+with-skills          skills arm — zod, feature folders      (10 tests, ~8/9)
+without-skills       contaminated baseline — ignore         (7 tests, 6/9)
 ```
 
 ---
 
-*If this changes how you think about AI coding "skills / rules / playbooks" —
-or if you think the experiment is flawed — open an issue. Honest disagreement
-is the point.*
+*If this changes how you think about AI coding "skills / rules / playbooks" — or
+if you think it's flawed — [open an issue](../../issues). Honest disagreement is
+the point.*
