@@ -27,20 +27,35 @@ export type NewAppointment = z.infer<typeof newAppointmentSchema>;
 
 ```tsx
 const [form] = Form.useForm<NewAppointment>();
-const appointments = useAppointments();
 
 const onFinish = (values: NewAppointment) => {
-  const parsed = newAppointmentSchema.safeParse(values); // boundary guard
+  const parsed = newAppointmentSchema.safeParse({
+    ...values,
+    patientName: values.patientName.trim(), // reject whitespace-only (see §3)
+  });
   if (!parsed.success) return; // antd rules normally catch this first
-  if (hasConflict(appointments, parsed.data)) {          // pure business rule
-    form.setFields([{ name: 'slot', errors: ['That slot is already booked'] }]);
-    return;
+
+  try {
+    // The DATA LAYER owns the invariant and throws — the form does NOT
+    // re-implement the conflict check (see localstorage-repo).
+    bookAppointment(parsed.data);
+    message.success('Appointment booked');
+    navigate('/appointments');
+  } catch (err) {
+    if (err instanceof SlotConflictError) {
+      form.setFields([{ name: 'slot', errors: [err.message] }]); // domain error → field error
+    } else {
+      message.error('Could not book the appointment.');
+    }
   }
-  appointmentRepo.create(parsed.data);
-  message.success('Appointment booked');
-  navigate('/appointments');
 };
 ```
+
+`bookAppointment` is the data-layer operation: it checks the pure `hasConflict`
+rule and throws `SlotConflictError` *before* writing (see localstorage-repo).
+The form never re-implements the rule — it only turns the domain error into a
+field error. Enforcing the invariant *only* in the form is a bug: any other
+caller bypasses it.
 
 ```tsx
 <Form form={form} layout="vertical" onFinish={onFinish}>
@@ -58,8 +73,13 @@ const onFinish = (values: NewAppointment) => {
 
 - **antd `rules`** handle required/format for inline UX; the **zod
   safeParse** in `onFinish` is the payload guard before persisting
-- Business rules (double-booking) are a PURE function (`hasConflict`) tested
-  independently (write-unit-tests) — never inline in `onFinish`
+- **The invariant lives in the DATA LAYER, not the form.** The booking
+  operation enforces double-booking (via the pure `hasConflict`, tested
+  independently) and throws a typed `SlotConflictError`; the form only
+  translates that domain error into a field error. Checking the rule *only* in
+  the form is bypassable — a genuine bug (see localstorage-repo's failure modes)
+- Trim text inputs and set `rules: [{ required: true, whitespace: true }]` so
+  "   " is rejected, not stored
 - Submit disabled/loading while working; success → antd `message` + navigate
 - DatePicker returns a dayjs object (antd 6) — convert to ISO string for
   storage (`value.toISOString()` / a mapper) so zod `.datetime()` passes
@@ -69,12 +89,14 @@ const onFinish = (values: NewAppointment) => {
 ## Verification contract
 
 - **Inputs**: the zod schema, the field design, the repository to submit to.
-- **Outputs**: an antd Form, validation (rules + zod guard), a tested pure
-  business-rule function, submit→persist→navigate, testids.
+- **Outputs**: an antd Form, validation (rules + zod guard), a **data-layer
+  operation that enforces the invariant and throws** (backed by a tested pure
+  rule fn), the form translating that error to a field error, testids.
 - **Verify**: `npm run typecheck` · `npm test` (invalid blocked; valid
   persists once; conflict rejected) · submit once valid and once invalid in
   the app.
-- **Failure modes**: business rule inside the handler instead of a pure fn;
-  no zod guard before persisting; dayjs stored raw (breaks `.datetime()`);
-  double-submit (button not disabled); missing field labels/testids;
-  hardcoded messages instead of i18n-ready copy.
+- **Failure modes**: enforcing the invariant *only* in the form (a second
+  caller bypasses it) instead of the data layer; no zod guard before
+  persisting; whitespace-only values accepted (no trim / no `whitespace` rule);
+  dayjs stored raw (breaks `.datetime()`); double-submit (button not disabled);
+  missing field labels/testids; hardcoded messages instead of i18n-ready copy.
