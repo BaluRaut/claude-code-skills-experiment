@@ -72,6 +72,47 @@ Notably, "zod as the source of truth" — which I'd assumed was the skills'
 signature contribution — showed up **unprompted** in cold baseline #2. A capable
 model reaches for it on its own.
 
+## Code-quality review (not just test counts)
+
+Test counts and ticket-completion are coarse, so I also *read* both arms — data
+layer, form, tests — and reviewed for correctness, architecture, error handling,
+edge cases, and test realism. **On substantive quality the no-skills arm won or
+tied every axis; the with-skills arm's only edge was convention consistency.**
+
+The headline finding is about the *skills*, not the model:
+
+> **The with-skills build shipped a failure mode that one of its own skills
+> explicitly warns against — because two skills contradicted each other.**
+
+- The double-booking rule is the app's core invariant. The **no-skills** arm
+  enforced it in the **data layer** (`bookAppointment()` throws and persists
+  nothing) — no caller can bypass it. The **with-skills** arm enforced it *only
+  in the form*; the repository's `create()` had no guard, so a second caller
+  would create a duplicate.
+- Why: the `new-form` skill's example put the check in the component's
+  `onFinish`, while the `localstorage-repo` skill said the opposite ("checked in
+  the repo before write, **not in the component**") and even lists "double-
+  booking in the component" as a **failure mode**. The model followed the form
+  skill and landed on the failure mode the other skill warned about. The cold
+  model, with no skills, put the guard in the right place by instinct.
+
+Other gaps, all favoring the no-skills arm: a generic `createStore` factory vs
+duplicated per-entity repos; a typed domain error + an unexpected-error branch
+vs none; input trimming + a `whitespace` rule (rejects `"   "`) vs neither; and
+a form test that actually drives the antd Select/DatePicker (with a
+timezone-safe assertion) vs one that only checks empty-submit.
+
+The implication is sharper than "skills didn't help":
+
+> **A skill with imperfect content doesn't just fail to help — it overrides the
+> model's better instinct and lowers quality. A wrong or self-contradictory
+> skill is *worse* than no skill.**
+
+Skills must be reviewed like code — including for *mutual consistency* across
+the set. Nothing caught the `new-form` ↔ `localstorage-repo` contradiction until
+a build exposed it. (Both skill bugs this experiment surfaced — this one and an
+earlier `useSyncExternalStore` caching bug — are now fixed.)
+
 ## Why didn't the skills help? (the part that actually matters)
 
 Short answer (**my interpretation** — the experiment measures outcomes, not
