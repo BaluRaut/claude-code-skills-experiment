@@ -42,6 +42,30 @@ That third point is the whole finding:
 > **Skills don't make the output better. They make it uniform.** Two cold runs
 > were both great and both different; skills would have made them the same.
 
+## Why didn't the skills help?
+
+Because **the skills mostly restated what a 2025 frontier model already knows.**
+React, zod, Testing Library, "extract a pure function," "handle empty states,"
+"write tests from the spec" — the model has these as defaults. Telling it to do
+them is a no-op on a well-specified task.
+
+- The skills encoded **mainstream best practice = the model's default** (not
+  team-specific, not non-obvious).
+- The **tickets already did the prompting** — precise ACs are themselves a
+  playbook, and they got there first.
+- Skills help where the default is **wrong or undetermined**; this CRUD app had
+  neither.
+- The payoff (convergence) is **invisible at n=1**.
+
+Caveat: the with-skills arm's lower test count (10 vs 15) is confounded — it was
+built by the contaminated session, not a cold one. The clean test *not yet run*
+is **cold + skills vs cold − skills.**
+
+**Corollary:** a skill only earns its place if it encodes something the model
+*doesn't already default to*. Test: delete it; if a cold model still does the
+right thing, it was documentation, not leverage. (Full reasoning in the
+[README](README.md#why-didnt-the-skills-help-the-part-that-actually-matters).)
+
 ## The honest conclusion
 
 - **Not a quality multiplier on one feature.** Measured head-to-head on a

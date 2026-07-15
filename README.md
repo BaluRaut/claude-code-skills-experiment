@@ -68,6 +68,66 @@ Notably, "zod as the source of truth" — which I'd assumed was the skills'
 signature contribution — showed up **unprompted** in cold baseline #2. A capable
 model reaches for it on its own.
 
+## Why didn't the skills help? (the part that actually matters)
+
+Short answer: **the skills mostly told a 2025 frontier model things it already
+knew.**
+
+A model at this level has absorbed React, zod, Testing Library, routing, "keep
+components thin," "extract a pure function," "handle empty/error states," "write
+tests from the spec" — from millions of examples. A skill that says *"validate
+with zod, keep the page thin, test the conflict rule as a pure function"* isn't
+teaching anything; it's **restating the model's defaults.** On a well-specified
+task the model does those things anyway, so the instruction is a no-op.
+
+Four things made this task the *worst case* for skills:
+
+1. **The skills encoded mainstream best practice — which is exactly the model's
+   default.** Not team-specific, not counter-intuitive. Redundant by
+   construction.
+2. **The tickets already did the prompting.** The ACs literally said "resilient
+   to corrupt data," "conflict rule as a standalone testable function," "tests
+   derived from ACs." A precise spec *is* a playbook — and it got there first.
+   Skills and good tickets overlap massively.
+3. **Skills only add value where the model's default is wrong or undetermined —
+   and this task had neither.** A skill earns its keep when (a) the right choice
+   is non-obvious or against the model's instinct (your error envelope,
+   least-privilege IAM, "don't retry at two layers," a house token system), or
+   (b) many options are equally fine and you need *everyone to pick the same
+   one*. A localStorage CRUD app has no unusual constraints (no "a"), and "b" is
+   invisible with a single builder.
+4. **Consistency can't be observed at n = 1.** The skills' actual product is
+   "every dev and every run converge on the same shape." You can't see
+   convergence with one builder — the one glimpse we got (two cold runs coming
+   out *good but different*) is precisely the thing skills exist to fix.
+
+### One honest caveat before over-reading this
+
+The with-skills arm scored slightly *lower* than the cold runs (10 vs 15 tests).
+Tempting to call that a "skills tax" (context spent reading 13 skill files
+instead of writing tests) — but it's **confounded**: the with-skills arm was
+built by the same contaminated authoring session, not a cold one. The truly
+clean test I have *not* run is **a cold session WITH skills installed vs a cold
+session without.** So the strict claim this experiment supports is narrow: *a
+cold model with no skills is already excellent, and skills didn't beat it.* The
+pristine A/B is still open.
+
+### The corollary (the actionable bit)
+
+Skills pay off *only to the extent they encode something the model doesn't
+already default to.* As models get stronger, the "teaching what it already
+knows" fraction grows — so a skill library should shrink toward the
+**non-default, team-specific, convergence-forcing** core:
+
+- **Keep:** "our API error shape is `{error:{code,message}}`, the frontend maps
+  `code` not `message`" · "secrets via SSM, never env" · "tenant id in every
+  query" · "don't retry at both the axios and query layers."
+- **Drop:** "use zod" · "write tests from ACs" · "extract pure functions" ·
+  "handle empty states" — the model already does these.
+
+**A test for whether a skill earns its place: delete it and see if a cold model
+still does the right thing. If yes, the skill is documentation, not leverage.**
+
 ## Takeaways
 
 1. **Not a quality multiplier on one feature.** Disproven twice, head-to-head.
