@@ -42,6 +42,24 @@ That third point is the whole finding:
 > **Skills don't make the output better. They make it uniform.** Two cold runs
 > were both great and both different; skills would have made them the same.
 
+## Code quality (I read both arms, not just the test counts)
+
+On correctness, architecture, error handling, and test realism the **no-skills
+arm won or tied every axis**; the with-skills arm's only edge was convention
+consistency. The sharpest finding is about the skills, not the model:
+
+**The with-skills build enforced the double-booking invariant *only in the
+form*; the repo had no guard — a bypassable bug.** The no-skills arm enforced it
+in the data layer (throws, persists nothing). Root cause: the `new-form` skill's
+example checked it in the component, while `localstorage-repo` said "in the repo,
+not the component" and *lists that as a failure mode*. Two skills contradicted
+each other; the model followed one and shipped the failure mode the other warned
+about.
+
+> **A wrong or self-contradictory skill is worse than no skill — it overrides
+> the model's better instinct.** Skills must be reviewed like code, for mutual
+> consistency. (Fixed: `new-form` now defers to a data-layer guard.)
+
 ## Why didn't the skills help?
 
 My interpretation (the experiment measures outcomes, not mechanism): **the
