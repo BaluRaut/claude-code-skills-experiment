@@ -54,6 +54,10 @@ Those two are the honest comparison.
 **Both cold, no-skills arms matched or beat the with-skills arm** — more tests,
 more tickets, and they even wrote through-the-form tests the skills arm skipped.
 
+Every arm had to clear the **same gates — typecheck, production build, and the
+automated test suite.** This compares *verified* implementations, not code that
+merely looked plausible.
+
 ## The finding
 
 The two cold runs were **both excellent and different from each other** — one
@@ -70,7 +74,8 @@ model reaches for it on its own.
 
 ## Why didn't the skills help? (the part that actually matters)
 
-Short answer: **the skills mostly told a 2025 frontier model things it already
+Short answer (**my interpretation** — the experiment measures outcomes, not
+mechanism): **the skills mostly told a 2025 frontier model things it already
 knew.**
 
 A model at this level has absorbed React, zod, Testing Library, routing, "keep
@@ -101,6 +106,18 @@ Four things made this task the *worst case* for skills:
    convergence with one builder — the one glimpse we got (two cold runs coming
    out *good but different*) is precisely the thing skills exist to fix.
 
+> **The core principle (this is the real insight).** A skill helps in exactly
+> two situations: the model's default is **wrong** (encode the correction), or
+> many options are equally valid and you need **everyone to pick the same one**
+> (encode the choice). This task had neither — which is why nothing changed.
+
+> **Consistency is a _distribution_, not a data point.** Most prompt-vs-skill
+> arguments measure *one* prompt → *one* answer → "it worked." But convergence
+> only becomes visible across dozens of developers and hundreds of PRs. A
+> single-app test — mine included — structurally *cannot* see the thing skills
+> are for. (This, I think, is why these debates never resolve: people compare
+> point estimates of a distribution.)
+
 ### One honest caveat before over-reading this
 
 The with-skills arm scored slightly *lower* than the cold runs (10 vs 15 tests).
@@ -125,12 +142,21 @@ knows" fraction grows — so a skill library should shrink toward the
 - **Drop:** "use zod" · "write tests from ACs" · "extract pure functions" ·
   "handle empty states" — the model already does these.
 
-**A test for whether a skill earns its place: delete it and see if a cold model
-still does the right thing. If yes, the skill is documentation, not leverage.**
+#### The "Delete Test" — a reusable heuristic
+
+> Delete the skill. Run a cold model on the same task.
+> - **Output unchanged** → the skill is *documentation*, not leverage. Drop it.
+> - **Output changes** → you've found *knowledge worth encoding*. Keep it.
+
+Run it over every skill in the catalog. It's the cheapest way to tell an
+organizational decision (worth encoding) from a restatement of general best
+practice (dead weight).
 
 ## Takeaways
 
-1. **Not a quality multiplier on one feature.** Disproven twice, head-to-head.
+1. **Not a quality multiplier on one feature (in this experiment).** Across two
+   independent cold baselines I found *no evidence* that skills improved
+   implementation quality — they did not outperform a capable model.
 2. **A consistency / governance mechanism.** Value = every dev and every AI run
    converging on *your* house style, across many repos and PRs. Invisible in one
    app; compounding at team scale.
@@ -139,6 +165,19 @@ still does the right thing. If yes, the skill is documentation, not leverage.**
 4. **Encode the non-obvious, not the default** — your error envelope,
    least-privilege IAM, "don't retry at two layers," tenant isolation. For what
    a good model already nails, a skill mostly adds ceremony.
+
+## What this experiment *can't* answer (and the one that could)
+
+This tested: greenfield · well-specified · single builder · single feature.
+That's the setting where skills should help *least*. The question it can't
+touch is the organizational one — which is the whole reason skills exist:
+
+> **12 developers · 3 months · a real repository · AI review enabled · shared
+> skills.** Measure review comments per PR, architecture drift, onboarding time,
+> PR turnaround, and escaped defects — *with* vs *without* the skill library.
+
+That's where consistency stops being invisible. If someone has run something
+like it, I want to see it.
 
 ## Limitations (please attack these)
 
@@ -169,6 +208,22 @@ without-skills-cold  ⭐ honest baseline — fresh subagent    (15 tests, 9/9)
 with-skills          skills arm — zod, feature folders      (10 tests, ~8/9)
 without-skills       contaminated baseline — ignore         (7 tests, 6/9)
 ```
+
+---
+
+## The thesis (what I think this is actually about)
+
+Large language models increasingly know general software engineering. So the
+remaining value of skills is **encoding organization-specific decisions and
+ensuring they're applied consistently** — not re-teaching React or zod. As
+models improve, the optimal skill library should get **smaller, more
+opinionated, and more organization-specific**, not larger and more generic.
+
+Put another way: **skills are evolving from _teaching software engineering_ to
+_encoding organizational memory_.** That shift — deciding what still needs to be
+written down when the model already knows the textbook — is the question a lot
+of engineering teams are about to face. This experiment is one reproducible data
+point toward answering it, not the answer.
 
 ---
 
