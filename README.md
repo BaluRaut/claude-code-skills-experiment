@@ -78,33 +78,22 @@ Short answer (**my interpretation** — the experiment measures outcomes, not
 mechanism): **the skills mostly told a 2025 frontier model things it already
 knew.**
 
-A model at this level has absorbed React, zod, Testing Library, routing, "keep
-components thin," "extract a pure function," "handle empty/error states," "write
-tests from the spec" — from millions of examples. A skill that says *"validate
-with zod, keep the page thin, test the conflict rule as a pure function"* isn't
-teaching anything; it's **restating the model's defaults.** On a well-specified
-task the model does those things anyway, so the instruction is a no-op.
+A model at this level absorbed React, zod, Testing Library, routing, "extract a
+pure function," "handle empty states," "test from the spec" from millions of
+examples. A skill telling it to do those isn't teaching — it's **restating the
+model's defaults**, so on a well-specified task it's a no-op.
 
 Four things made this task the *worst case* for skills:
 
-1. **The skills encoded mainstream best practice — which is exactly the model's
-   default.** Not team-specific, not counter-intuitive. Redundant by
-   construction.
-2. **The tickets already did the prompting.** The ACs literally said "resilient
-   to corrupt data," "conflict rule as a standalone testable function," "tests
-   derived from ACs." A precise spec *is* a playbook — and it got there first.
-   Skills and good tickets overlap massively.
-3. **Skills only add value where the model's default is wrong or undetermined —
-   and this task had neither.** A skill earns its keep when (a) the right choice
-   is non-obvious or against the model's instinct (your error envelope,
-   least-privilege IAM, "don't retry at two layers," a house token system), or
-   (b) many options are equally fine and you need *everyone to pick the same
-   one*. A localStorage CRUD app has no unusual constraints (no "a"), and "b" is
-   invisible with a single builder.
-4. **Consistency can't be observed at n = 1.** The skills' actual product is
-   "every dev and every run converge on the same shape." You can't see
-   convergence with one builder — the one glimpse we got (two cold runs coming
-   out *good but different*) is precisely the thing skills exist to fix.
+1. **The skills encoded mainstream best practice — the model's default.**
+   Redundant by construction.
+2. **The tickets already did the prompting.** The ACs said "resilient to corrupt
+   data," "conflict rule as a standalone testable function," "tests derived from
+   ACs." A precise spec *is* a playbook — and it got there first.
+3. **Skills only help where the model's default is wrong or undetermined — this
+   task had neither.** (Expanded just below.)
+4. **Consistency can't be observed at n = 1** — you can't see convergence with a
+   single builder. (Expanded just below.)
 
 > **The core principle (this is the real insight).** A skill helps in exactly
 > two situations: the model's default is **wrong** (encode the correction), or
@@ -140,7 +129,7 @@ knows" fraction grows — so a skill library should shrink toward the
   `code` not `message`" · "secrets via SSM, never env" · "tenant id in every
   query" · "don't retry at both the axios and query layers."
 - **Drop:** "use zod" · "write tests from ACs" · "extract pure functions" ·
-  "handle empty states" — the model already does these.
+  "handle empty states" — the model already did these reliably in this experiment.
 
 #### The "Delete Test" — a reusable heuristic
 
@@ -161,7 +150,9 @@ practice (dead weight).
    converging on *your* house style, across many repos and PRs. Invisible in one
    app; compounding at team scale.
 3. **Ticket quality was the dominant lever.** Good acceptance criteria carried
-   every arm. The highest-ROI "skill" may be the one that forces good tickets.
+   every arm — in hindsight, the ACs acted like a high-quality prompt: many
+   responsibilities I expected the skills to provide had already been specified
+   by the tickets. The highest-ROI "skill" may be the one that forces good tickets.
 4. **Encode the non-obvious, not the default** — your error envelope,
    least-privilege IAM, "don't retry at two layers," tenant isolation. For what
    a good model already nails, a skill mostly adds ceremony.
@@ -219,11 +210,18 @@ ensuring they're applied consistently** — not re-teaching React or zod. As
 models improve, the optimal skill library should get **smaller, more
 opinionated, and more organization-specific**, not larger and more generic.
 
+The deeper shift: **as frontier models improve, organizational knowledge — not
+programming knowledge — becomes the scarce resource worth encoding.** Stop
+encoding React / TypeScript / testing / clean code. Encode retry policy, API
+error envelope, tenant isolation, observability, IAM, deployment, release
+process, review standards — the things only *your* org knows.
+
 Put another way: **skills are evolving from _teaching software engineering_ to
-_encoding organizational memory_.** That shift — deciding what still needs to be
-written down when the model already knows the textbook — is the question a lot
-of engineering teams are about to face. This experiment is one reproducible data
-point toward answering it, not the answer.
+_encoding organizational memory_.** If I had to compress the whole experiment
+into one honest line: *I expected skills to improve code quality; what they
+actually seem to buy is preserving organizational knowledge and enforcing
+consistency — not teaching a frontier model how to write React.* This is one
+reproducible data point toward that, not the last word.
 
 ---
 
