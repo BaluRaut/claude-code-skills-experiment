@@ -1,81 +1,96 @@
-# Skills A/B — with vs without, head-to-head
+# Skills A/B/C — the bias-corrected comparison
 
 Same 9-ticket backlog (DOC-1…DOC-9), same stack (Vite + React 19 + antd 6 +
-localStorage), built twice: once from tickets only (`without-skills`), once
-following the 13 installed skills (`with-skills`).
+localStorage), built **three** ways:
 
-> ⚠️ Read with the caveat: both arms were built in a session that had authored
-> the skills, so both are *best-case*. The structural/testing deltas below are
-> the skills' genuine signature (they come from following the playbooks); the
-> absolute quality of the baseline is flattered.
+| Arm | Branch | Who built it |
+|-----|--------|--------------|
+| **contaminated baseline** | `without-skills` | this session (had authored the skills — knew every convention) |
+| **cold baseline** ⭐ | `without-skills-cold` | a **fresh subagent**, zero conversation history, no `.claude/`, no `CLAUDE.md` — tickets only |
+| **with-skills** | `with-skills` | this session, following the 13 installed skills |
 
-## Scorecard
+The **cold baseline is the trustworthy one**: it removes the contamination we
+kept flagging. Its result changes the conclusion — read on honestly.
 
-| Metric | without-skills | with-skills |
-|--------|----------------|-------------|
-| Typecheck / build | ✅ / ✅ | ✅ / ✅ |
-| Tests | **7** (3 files) | **10** (4 files) |
-| Fully-met tickets | **6 / 9** | **~8 / 9** |
-| Data validation | plain TS interfaces + hand-written guards; **zod unused** | **zod schemas = source of truth**, parsed at boundaries |
-| Corrupt-data resilience (DOC-2 AC-3) | implemented, **not tested** | implemented **and tested** |
-| Form busy state (DOC-4 AC-5) | **missing** | present (`loading`) |
-| Structure | flat `data/ hooks/ lib/ pages/` | **feature folders** `features/<x>/` |
-| testids | pragmatic, partial | **systematic** |
-| Error boundary | basic alert | alert **+ retry** |
-| List + cancel test (DOC-6) | none | **present** |
-| Empty-state test (DOC-7) | none | **present** |
-| Per-ticket verify ritual | none until DOC-8 | skill verification contracts |
+## Scorecard (all three verified: typecheck ✅, build ✅)
 
-## Where the arms were the SAME (skills aren't magic)
+| Metric | contaminated baseline | **cold baseline (no skills)** | with-skills |
+|--------|------------------------|-------------------------------|-------------|
+| Tests passing | 7 | **15** | 10 |
+| Tickets fully met | 6 / 9 | **9 / 9** | ~8 / 9 |
+| Through-the-form conflict test | ✗ | **✓** | ✗ |
+| Valid-booking-persists UI test | ✗ | **✓** | ✗ |
+| Corrupt-data resilience tested | ✗ | ✓ | ✓ |
+| `getSnapshot` infinite-loop avoided | ✓ (I knew it) | **✓ (figured it out)** | ✓ (skill) |
+| jsdom polyfills added | matchMedia | **matchMedia + ResizeObserver** | matchMedia |
+| Form busy state (DOC-4 AC-5) | ✗ | ✓ | ✓ |
+| Persistence isolated from UI | ✓ | ✓ | ✓ |
+| Pure conflict function | ✓ | ✓ | ✓ |
+| Validation approach | plain TS, zod unused | **hand-rolled resilient parsing** | **zod = source of truth** |
+| Structure | flat `data/ hooks/` | layered `domain/ data/ hooks/` | `features/<x>/` folders |
 
-- Both **work** — typecheck, tests, and build all pass on both branches.
-- Both hit **`window.matchMedia`** jsdom friction and needed the same polyfill.
-- Both hit **antd Select/DatePicker portal** testing difficulty — neither
-  wrote the through-the-form conflict UI test.
-- Both trip the **antd 6 `List` deprecation** warning.
-- Both extracted `hasConflict` as a pure function — because **the ticket
-  (DOC-5 AC-4) demanded it**. Good tickets carry a lot on their own.
+## The headline finding (it partly overturns the earlier writeup)
 
-## Where the skills changed the outcome
+**The cold, no-skills arm was the most complete and best-tested of the three.**
+A capable model, given *good acceptance criteria*, produced 15 passing tests
+and 9/9 tickets — including the two through-the-form tests that **both** of my
+arms descoped, and a `ResizeObserver` polyfill neither of mine bothered with.
+It even avoided the `useSyncExternalStore` caching bug on its own.
 
-1. **Validation discipline** — zod schemas as the single source of truth vs
-   hand-rolled type guards with zod sitting unused. This is the biggest
-   correctness/maintenance difference.
-2. **Test coverage +43%** (10 vs 7), and crucially the *right* extra tests:
-   corrupt-data resilience and list/cancel/empty — behaviors the baseline
-   shipped untested.
-3. **Consistency & structure** — every feature followed the same
-   schema→repo→hook→page shape and testid convention, without being told each
-   time. This is what compounds across many tickets, devs, and repos.
-4. **Small AC gaps closed** — the form busy state, the tested resilience,
-   the error-boundary retry.
-5. **A latent bug avoided** — the fixed `localstorage-repo` skill steered
-   around the `useSyncExternalStore` infinite-loop trap.
+And note: my "contaminated baseline" was the **weakest** arm (6/9, 7 tests).
+Lesson — *me pretending to be a baseline is unreliable in both directions*: I
+under-invested there and the numbers were meaningless. The cold agent is the
+only honest baseline, and it's excellent.
 
-## Honest conclusion
+## So what did the skills actually add?
 
-For a **9-ticket toy app**, both arms produce a working, typed, tested,
-building app — the baseline is *not* bad, because the tickets were good and
-the model is capable. The skills' value shows up as **consistency, boundary
-validation, ~40% more (and better-targeted) tests, systematic testids, and a
-uniform structure** — i.e. the things that reduce review nits and pay off
-across a codebase, not the things that make a single feature "work."
+Stripped of bias, the with-skills arm's **unique** contributions were:
 
-At the scale that actually matters to the team — **12 developers × many repos
-× hundreds of tickets** — that per-ticket consistency and the "did the right
-thing without being asked" behavior is the whole point. A single toy app
-under-samples the benefit; the delta here (6/9 → 8/9, 7 → 10 tests, zod vs
-none, flat vs structured) is the *floor*, and it compounds.
+1. **zod as the single source of truth** — the cold model used its own
+   hand-rolled validation (which worked fine); the skill mandates zod at every
+   boundary. This is a *house-convention* choice, not a correctness win.
+2. **Feature-folder structure** (`features/appointments/`) vs the cold model's
+   layer folders (`domain/ data/`). Again a convention, not "better."
 
-What the experiment also proved: **skills are not a substitute for good
-tickets or for knowing your stack's quirks** (antd/jsdom bit both arms
-equally), and **using skills surfaced and fixed a real bug in a skill** — the
-pilot loop working as intended.
+That's essentially it. On **correctness, completeness, and test coverage the
+skills did not beat a cold capable model** on this task — they arguably trailed
+it.
+
+## The honest conclusion for the team
+
+- **Skills are not a quality multiplier on a single feature.** A capable model
+  + well-written tickets already produces excellent, tested, well-structured
+  code. This experiment shows that clearly.
+- **Skills are a _consistency and conformance_ mechanism.** Their value is
+  making 12 developers and every AI run produce code in **your** house style —
+  same validation (zod), same structure, same error shape, same testids —
+  *without re-deciding each time*. That uniformity is what pays off across many
+  repos and hundreds of PRs (fewer review nits, easier onboarding, safer
+  refactors). It does not show up in a single 9-ticket app.
+- **The highest-leverage lever this experiment revealed is TICKET QUALITY.**
+  The neutral, well-specified acceptance criteria carried the outcome in every
+  arm. Investing in good tickets (and the `start-task` skill that forces
+  Given/When/Then ACs) may beat investing in the code-gen skills.
+- **Encode the non-obvious, not the default.** Skills earn their keep where the
+  right choice ISN'T what a model does by default — your specific error
+  envelope, least-privilege IAM, "no double-retry across layers," tenant
+  isolation. For things a good model already does (extract a pure function,
+  handle empty states, write tests from ACs), a skill mostly adds ceremony.
+
+## Don't oversell it
+
+If you pitch skills to the team as "AI writes better code," this experiment
+will embarrass that claim the first time someone runs a cold baseline. Pitch
+it as what it is: **governance — consistent, house-conformant output at scale,
+and a place to encode decisions that aren't the model's default.** That's a
+real and defensible value for a 12-dev org; it's just not a magic quality
+boost.
 
 ## Reproduce / inspect
 
 ```
-git checkout without-skills   # baseline arm + EXPERIMENT-LOG-without-skills.md
-git checkout with-skills      # skills arm + EXPERIMENT-LOG-with-skills.md
-git diff without-skills with-skills -- src   # see the two implementations
+git checkout without-skills-cold   # the trustworthy baseline (15 tests, 9/9)
+git checkout with-skills           # the skills arm (zod, feature folders)
+git checkout without-skills        # the contaminated baseline (ignore — biased)
+git diff without-skills-cold with-skills -- src   # cold-baseline vs skills
 ```
