@@ -148,7 +148,10 @@ practice (dead weight).
    implementation quality — they did not outperform a capable model.
 2. **A consistency / governance mechanism.** Value = every dev and every AI run
    converging on *your* house style, across many repos and PRs. Invisible in one
-   app; compounding at team scale.
+   app; compounding at team scale. Mechanically, a skill turns an **open decision
+   into a settled default** — no re-deciding, no drift, no review argument. The
+   catch: it scales *whatever* it encodes, so the default had better be right
+   (a good standard or a bad one, applied consistently).
 3. **Ticket quality was the dominant lever.** Good acceptance criteria carried
    every arm — in hindsight, the ACs acted like a high-quality prompt: many
    responsibilities I expected the skills to provide had already been specified
