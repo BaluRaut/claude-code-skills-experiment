@@ -29,7 +29,9 @@ export function readList<T>(key: string): unknown[] {
   try { return JSON.parse(raw) as unknown[]; } catch { return []; }
 }
 export function writeList(key: string, items: unknown[]): void {
-  localStorage.setItem(key, JSON.stringify(items));
+  localStorage.setItem(key, JSON.stringify(items)); // persist only
+}
+export function notify(key: string): void {
   window.dispatchEvent(new Event(`store:${key}`)); // reactivity signal (§3)
 }
 ```
@@ -42,20 +44,30 @@ or hand-edited) and **validate on write**:
 
 ```ts
 const KEY = 'appointments';
+let snapshot: Appointment[] = read(); // cached — see the ⚠️ in §3 for why
+
+function read(): Appointment[] {
+  return readList(KEY)
+    .map((x) => appointmentSchema.safeParse(x))
+    .filter((r) => r.success)
+    .map((r) => r.data); // drop corrupt rows rather than crash the app
+}
+
+function commit(items: Appointment[]): void {
+  writeList(KEY, items); // 1. persist
+  snapshot = read();     // 2. refresh the cached snapshot BEFORE notifying
+  notify(KEY);           // 3. tell subscribers (now reading fresh data)
+}
+
 export const appointmentRepo = {
-  list(): Appointment[] {
-    return readList(KEY)
-      .map((x) => appointmentSchema.safeParse(x))
-      .filter((r) => r.success)
-      .map((r) => r.data); // drop corrupt rows rather than crash the app
-  },
+  list: (): Appointment[] => snapshot, // STABLE reference (critical for §3)
   create(input: NewAppointment): Appointment {
     const created = appointmentSchema.parse({ ...input, id: crypto.randomUUID(), createdAt: new Date().toISOString() });
-    writeList(KEY, [...readList(KEY), created]);
+    commit([...snapshot, created]);
     return created;
   },
   remove(id: string): void {
-    writeList(KEY, appointmentRepo.list().filter((a) => a.id !== id));
+    commit(snapshot.filter((a) => a.id !== id));
   },
 };
 ```
@@ -81,9 +93,15 @@ export function useAppointments(): Appointment[] {
 }
 ```
 
-Mutations are plain calls: `appointmentRepo.create(...)` — the dispatched
-event re-renders every subscriber. No React Query here (there's no server
-cache to manage); if this app grew a backend, THIS is the seam you'd swap.
+> ⚠️ **`getSnapshot` must return a STABLE reference.** If `list()` rebuilt a
+> fresh array on every call, `useSyncExternalStore` sees a "new" value each
+> render and loops forever ("getSnapshot should be cached"). That's why §2
+> caches `snapshot` and rebuilds it only on write — and refreshes it BEFORE
+> `notify()`, or subscribers read stale data.
+
+Mutations are plain calls: `appointmentRepo.create(...)` — persist → refresh
+snapshot → notify. No React Query here (there's no server cache to manage);
+if this app grew a backend, THIS is the seam you'd swap.
 
 ## 4. Boundaries
 
@@ -106,4 +124,7 @@ cache to manage); if this app grew a backend, THIS is the seam you'd swap.
   `localStorage` directly; no zod parse on read (a corrupt/old row crashes
   the list); business rule (double-booking) in the component instead of a
   pure function; forgetting the change event so the UI goes stale until
-  refresh; `JSON.parse` without a try/catch.
+  refresh; `JSON.parse` without a try/catch; a `useSyncExternalStore`
+  `getSnapshot` that returns a fresh array each call (infinite re-render —
+  cache the snapshot, rebuild only on write); notifying subscribers BEFORE
+  refreshing the cached snapshot (they read stale data).
