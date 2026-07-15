@@ -44,7 +44,8 @@ That third point is the whole finding:
 
 ## Why didn't the skills help?
 
-Because **the skills mostly restated what a 2025 frontier model already knows.**
+My interpretation (the experiment measures outcomes, not mechanism): **the
+skills mostly restated what a 2025 frontier model already knows.**
 React, zod, Testing Library, "extract a pure function," "handle empty states,"
 "write tests from the spec" — the model has these as defaults. Telling it to do
 them is a no-op on a well-specified task.
