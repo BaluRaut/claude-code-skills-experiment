@@ -4,6 +4,10 @@ import { ConfigProvider, App as AntApp } from 'antd';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { antdTheme } from './theme/tokens';
+import { seedDoctors } from './features/doctors/seed';
+
+// DOC-3: seed the doctors directory once on startup (idempotent in the repo).
+seedDoctors();
 
 // antd 6 + React 19: ConfigProvider carries the theme (mapped from tokens),
 // AntApp provides message/notification context and the CSS reset boundary.

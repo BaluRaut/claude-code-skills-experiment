@@ -1,14 +1,41 @@
-// react-router-v6 skill: one central route table. You'll add routes here as
-// you build — e.g. /appointments, /appointments/new, /doctors.
+// react-router-v6: one central route table. Each screen is wrapped in an
+// ErrorBoundary so a render error in one page never blanks the whole app
+// (DOC-7 AC-3).
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { HomePage } from './pages/HomePage';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { AppointmentsPage } from './features/appointments/pages/AppointmentsPage';
+import { NewAppointmentPage } from './features/appointments/pages/NewAppointmentPage';
+import { DoctorsPage } from './features/doctors/pages/DoctorsPage';
 
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
-      {/* Add feature routes here (see the new-page skill). */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/" element={<Navigate to="/appointments" replace />} />
+      <Route
+        path="/appointments"
+        element={
+          <ErrorBoundary>
+            <AppointmentsPage />
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/appointments/new"
+        element={
+          <ErrorBoundary>
+            <NewAppointmentPage />
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/doctors"
+        element={
+          <ErrorBoundary>
+            <DoctorsPage />
+          </ErrorBoundary>
+        }
+      />
+      <Route path="*" element={<Navigate to="/appointments" replace />} />
     </Routes>
   );
 }
