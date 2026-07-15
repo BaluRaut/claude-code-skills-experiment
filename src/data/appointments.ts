@@ -38,3 +38,8 @@ export function removeAppointment(id: string): void {
 export function subscribeAppointments(listener: () => void): () => void {
   return subscribe(KEY, listener);
 }
+
+// Test helper: re-read the cached snapshot after localStorage is reset.
+export function reloadAppointments(): void {
+  snapshot = read();
+}

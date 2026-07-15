@@ -4,9 +4,11 @@ import { ConfigProvider, App as AntApp } from 'antd';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { antdTheme } from './theme/tokens';
+import { seedDoctorsIfEmpty } from './data/doctors';
 
-// antd 6 + React 19: ConfigProvider carries the theme (mapped from tokens),
-// AntApp provides message/notification context and the CSS reset boundary.
+// DOC-3: ensure the doctor directory is seeded before first render.
+seedDoctorsIfEmpty();
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ConfigProvider theme={antdTheme}>
