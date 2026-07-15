@@ -9,6 +9,12 @@ two independent "cold" baselines with no skills at all.**
 > validation, structure, conventions) across many builders. The value is
 > **consistency and policy enforcement at scale, not a quality boost on one
 > feature.** Ticket quality mattered more than skills in every arm.
+>
+> **Update (a fifth arm).** The with-skills shortfall traced to a *buggy* skill.
+> After fixing it, a cold build that followed the corrected skill produced
+> correct architecture *and* the most tests (20). So skills **do** steer output —
+> in proportion to how correct their content is. Not "skills don't work"; rather
+> "skills work exactly as well as their content is correct."
 
 I'm building a [library of Claude Code skills](https://github.com/BaluRaut/claude-code-skills)
 (playbooks that tell an AI agent *how my team writes code*) for a 12-dev team.
@@ -111,7 +117,8 @@ The implication is sharper than "skills didn't help":
 Skills must be reviewed like code — including for *mutual consistency* across
 the set. Nothing caught the `new-form` ↔ `localstorage-repo` contradiction until
 a build exposed it. (Both skill bugs this experiment surfaced — this one and an
-earlier `useSyncExternalStore` caching bug — are now fixed.)
+earlier `useSyncExternalStore` caching bug — are now fixed — **and rerunning with
+the fix produced correct architecture; see the next section.**)
 
 ## Why didn't the skills help? (the part that actually matters)
 
@@ -182,11 +189,42 @@ Run it over every skill in the catalog. It's the cheapest way to tell an
 organizational decision (worth encoding) from a restatement of general best
 practice (dead weight).
 
+## The follow-up: fix the skill, rerun (a fifth arm)
+
+The code review found a *fixable* cause — a self-contradictory skill. So I fixed
+`new-form` (defer the invariant to the data layer, matching `localstorage-repo`)
+and reran the build with a **fresh cold subagent told to follow the corrected
+skills** — no knowledge of any of these findings (every experiment doc stripped
+from its branch). Verified: typecheck ✅, build ✅.
+
+| | cold, no skills | with-skills (buggy) | **cold + fixed skills** |
+|---|:---:|:---:|:---:|
+| Tests | 15 | 10 | **20** |
+| Tickets | 9/9 | ~8/9 | **9/9** |
+| Invariant placement | data layer (instinct) | **form (bug)** | **data layer (followed the skill)** |
+
+The rebuilt arm put the double-booking guard in the data layer — and its code
+comment *cites the corrected skill* as the reason. **Fixing the skill fixed the
+output.** That confirms the earlier shortfall was a content bug, not proof that
+skills can't help — and it demonstrates the causal claim directly:
+
+> **Skills steer output. The *direction* is set by their content: a correct
+> skill steered a cold model to correct architecture; a buggy one steered it to
+> a bug. Skills are as good — or as harmful — as their content is correct.**
+
+Honest caveats: the "buggy → bug" half is confounded (that arm was my
+contaminated build; I never ran cold + buggy), and 20-vs-15 tests is n = 1 and
+could be run variance. The clean, verified signal is the **placement** — a cold
+agent following the fixed skill produced the correct architecture and cited the
+skill for it.
+
 ## Takeaways
 
-1. **Not a quality multiplier on one feature (in this experiment).** Across two
-   independent cold baselines I found *no evidence* that skills improved
-   implementation quality — they did not outperform a capable model.
+1. **A content-dependent lever, not a free quality boost.** Two cold no-skills
+   baselines already matched a capable model's best; a *buggy* skill made the
+   output worse; a *fixed* skill steered a cold build to correct architecture and
+   the most tests. Skills help exactly to the degree their content is correct —
+   and hurt when it isn't.
 2. **A consistency / governance mechanism.** Value = every dev and every AI run
    converging on *your* house style, across many repos and PRs. Invisible in one
    app; compounding at team scale. Mechanically, a skill turns an **open decision

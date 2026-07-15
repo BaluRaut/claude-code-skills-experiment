@@ -85,6 +85,28 @@ is **cold + skills vs cold − skills.**
 right thing, it was documentation, not leverage. (Full reasoning in the
 [README](README.md#why-didnt-the-skills-help-the-part-that-actually-matters).)
 
+## Follow-up: fix the skill, rerun (fifth arm)
+
+I fixed `new-form` (defer the invariant to the data layer) and reran with a fresh
+cold subagent told to follow the corrected skills — no findings leaked. Verified:
+typecheck ✅, build ✅.
+
+| | cold, no skills | with-skills (buggy) | **cold + fixed skills** |
+|---|:---:|:---:|:---:|
+| Tests | 15 | 10 | **20** |
+| Invariant | data layer | **form (bug)** | **data layer (cites the skill)** |
+
+**Fixing the skill fixed the output** — the rebuilt arm enforced the invariant in
+the data layer and its comment cites the corrected skill. So skills *do* steer
+output; the direction is set by their content.
+
+> **A correct skill steered a cold model to correct architecture; a buggy one
+> steered it to a bug. Skills are as good — or as harmful — as their content.**
+
+Caveats: "buggy → bug" is confounded (that arm was the contaminated build; no
+cold + buggy run exists), and 20 vs 15 tests is n = 1. The clean signal is the
+placement.
+
 ## The honest conclusion
 
 - **Not a quality multiplier on one feature.** Measured head-to-head on a
