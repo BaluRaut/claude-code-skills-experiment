@@ -1,14 +1,17 @@
-// react-router-v6 skill: one central route table. You'll add routes here as
-// you build — e.g. /appointments, /appointments/new, /doctors.
+// react-router-v6 skill: one central route table, redirect from root, 404.
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { HomePage } from './pages/HomePage';
+import { AppointmentsListPage } from './features/appointments/pages/AppointmentsListPage';
+import { BookAppointmentPage } from './features/appointments/pages/BookAppointmentPage';
+import { DoctorsPage } from './features/doctors/DoctorsPage';
 
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
-      {/* Add feature routes here (see the new-page skill). */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/" element={<Navigate to="/appointments" replace />} />
+      <Route path="/appointments" element={<AppointmentsListPage />} />
+      <Route path="/appointments/new" element={<BookAppointmentPage />} />
+      <Route path="/doctors" element={<DoctorsPage />} />
+      <Route path="*" element={<Navigate to="/appointments" replace />} />
     </Routes>
   );
 }
